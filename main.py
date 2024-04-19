@@ -1,11 +1,7 @@
 import streamlit as st
 import plotly.express  as px
-
-def get_data (days):
-    dates = ["2022-10-10", "2022-10-11", "2022-10-12"]
-    temperatures = [12,34,23]
-    temperatures = [days * i for i in temperatures]
-    return dates, temperatures
+from backend import get_data
+from datetime import datetime
 
 
 st.title("Weather Forecast for the Next Days")
@@ -16,8 +12,28 @@ option = st.selectbox("Select data to view",
                        ("Temperature", "Sky"))
 st.subheader(f"{option} for the next {days} days in {place} ")
 
-d, t = get_data(days)
+# generate plots for temperature and sky
+if place:
+    return_data = get_data(place, days)
+    filtered_data = return_data[1]
+    data_code = return_data[0]
+    if data_code=='404':
+        st.info("City not found")
+    else:
+        dates = [datetime.fromtimestamp(i["dt"]).strftime('%Y-%m-%d %H:%%M:%S') for i in filtered_data]
 
-figure =  px.line(x=d, y=t, labels={"x":"Date", "y": "Temperature (C)"})
+        match option:
+            case "Temperature":
+                temps = [f["main"]["temp"]/100 for f in filtered_data]
+                figure =  px.line(x=dates, y=temps, labels={"x":"Date", "y": "Temperature (C)"})
+                st.plotly_chart(figure)
+            case "Sky":
+                skys = [f["weather"][0]["main"] for f in filtered_data]
+                sky_images_paths = {"Rain":"images/rain.png", "Clouds":"images/cloud.png",
+                            "Snow":"images/snow.png", "Clear":"images/clear.png"}
+                sky_images = [sky_images_paths[sky] for sky in skys]
+                st.image(sky_images, width=200)
+                # figure =  px.line(x=d, y=t, labels={"x":"Date", "y": "Temperature (C)"})
+                # st.plotly_chart(figure)
 
-st.plotly_chart(figure)
+
